@@ -20,134 +20,304 @@ class SearchPage extends StatefulWidget {
 }
 
 class _SearchPageState extends State<SearchPage> {
-  @override
-  Widget build(BuildContext context) {
+  bool beta = false;
+  String promo = '';
+
+  Future<void> _pickAirport(bool isFrom) async {
     final a = context.app;
-    return Screen(
-      title: 'Book a flight',
-      canPop: false,
-      body: ListView(padding: const EdgeInsets.all(18), children: [
-        Scenic(c1: 0xFF0E6E7E, c2: 0xFF0B1F44, height: 110, child: Padding(padding: const EdgeInsets.all(18), child: Align(alignment: Alignment.centerLeft, child: Text('Where would\nyou like to go?', style: serif(22, c: Colors.white))))),
-        const SizedBox(height: 16),
-        CardBox(
-          padding: const EdgeInsets.all(18),
+    final r = await sheet<String>(context, (ctx) {
+      var q = '';
+      return StatefulBuilder(builder: (ctx, set) {
+        final list = airports.where((x) => '${x.city} ${x.code} ${x.country}'.toLowerCase().contains(q.toLowerCase())).toList();
+        return SizedBox(
+          height: MediaQuery.of(ctx).size.height * .75,
           child: Column(children: [
-            Row(children: [
-              for (final t in ['Return', 'One-way'])
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(
-                    label: Text(t),
-                    selected: a.tripType == t,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
+              child: TextField(autofocus: false, onChanged: (v) => set(() => q = v), decoration: InputDecoration(hintText: isFrom ? 'Search departure city' : 'Search arrival city', prefixIcon: const Icon(Icons.search))),
+            ),
+            Expanded(
+              child: ListView(children: [
+                for (final x in list)
+                  ListTile(
+                    leading: Text(x.code, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: navy)),
+                    title: Text(x.city, style: const TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: Text('${x.name}, ${x.country}'),
+                    onTap: () => Navigator.pop(ctx, x.code),
+                  ),
+              ]),
+            ),
+          ]),
+        );
+      });
+    });
+    if (r != null) {
+      if (isFrom) {
+        a.from = r;
+      } else {
+        a.to = r;
+      }
+      a.notify();
+    }
+  }
+
+  void _passengers() {
+    final a = context.app;
+    sheet(context, (ctx) => StatefulBuilder(
+          builder: (ctx, set) => Padding(
+            padding: const EdgeInsets.all(22),
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Passengers & cabin', style: serif(21)),
+              const SizedBox(height: 16),
+              Row(children: [
+                const Expanded(child: Text('Adults', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600))),
+                Stepper2(a.adults, (v) {
+                  set(() => a.adults = v);
+                  a.notify();
+                }, min: 1, max: 6),
+              ]),
+              const SizedBox(height: 16),
+              Wrap(spacing: 8, runSpacing: 8, children: [
+                for (final c in cabins)
+                  ChoiceChip(
+                    label: Text(c, style: TextStyle(color: a.cabin == c ? Colors.white : ink, fontWeight: FontWeight.w600)),
+                    selected: a.cabin == c,
                     selectedColor: navy,
-                    labelStyle: TextStyle(color: a.tripType == t ? Colors.white : ink, fontWeight: FontWeight.w600),
                     showCheckmark: false,
                     onSelected: (_) {
-                      a.tripType = t;
+                      set(() => a.cabin = c);
                       a.notify();
                     },
                   ),
-                ),
-            ]),
-            const SizedBox(height: 14),
-            Stack(alignment: Alignment.centerRight, children: [
-              Column(children: [
-                Pick<String>('From', a.from, [for (final x in airports) x.code], (v) {
-                  a.from = v;
-                  a.notify();
-                }, show: (c) => airportBy(c).label, icon: Icons.flight_takeoff),
-                Pick<String>('To', a.to, [for (final x in airports) x.code], (v) {
-                  a.to = v;
-                  a.notify();
-                }, show: (c) => airportBy(c).label, icon: Icons.flight_land),
               ]),
-              Positioned(
-                right: 44, top: 38,
-                child: Material(
-                  color: goldSoft, shape: const CircleBorder(),
-                  child: InkWell(customBorder: const CircleBorder(), onTap: a.swap, child: const Padding(padding: EdgeInsets.all(8), child: Icon(Icons.swap_vert, color: navy, size: 22))),
-                ),
-              ),
-            ]),
-            Row(children: [
-              Expanded(
-                child: Field('Departure', icon: Icons.calendar_today_outlined, readOnly: true, c: TextEditingController(text: fmtShort(a.depart)), onTap: () async {
-                  final d = await pickDate(context, a.depart);
-                  if (d != null) {
-                    a.depart = d;
-                    if (a.ret != null && a.ret!.isBefore(d)) a.ret = d.add(const Duration(days: 7));
-                    a.notify();
-                  }
-                }),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: a.tripType == 'Return'
-                    ? Field('Return', icon: Icons.event_repeat, readOnly: true, c: TextEditingController(text: a.ret == null ? '' : fmtShort(a.ret!)), onTap: () async {
-                        final d = await pickDate(context, a.ret ?? a.depart, first: a.depart);
-                        if (d != null) {
-                          a.ret = d;
-                          a.notify();
-                        }
-                      })
-                    : const Field('Return', icon: Icons.event_repeat, readOnly: true, hint: 'One-way'),
-              ),
-            ]),
-            Row(children: [
-              Expanded(
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: line)),
-                  child: Row(children: [
-                    const Icon(Icons.person_outline, color: muted, size: 20),
-                    const SizedBox(width: 6),
-                    const Expanded(child: Text('Passengers', style: TextStyle(color: muted))),
-                  ]),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Stepper2(a.adults, (v) {
-                  a.adults = v;
-                  a.notify();
-                }, min: 1, max: 6),
-              ),
-            ]),
-            Pick<String>('Cabin class', a.cabin, cabins, (v) {
-              a.cabin = v;
-              a.notify();
-            }, icon: Icons.airline_seat_recline_extra),
-            const SizedBox(height: 4),
-            PrimaryBtn('Search flights', icon: Icons.search, onTap: () {
-              if (a.from == a.to) {
-                toast(context, 'Origin and destination must be different');
-                return;
-              }
-              Navigator.of(context).pushNamed('results');
-            }),
-          ]),
-        ),
-        const H('Popular routes'),
-        for (final r in const [('BOM', 'SIN'), ('SIN', 'BKK'), ('DEL', 'LHR'), ('SIN', 'SYD')])
-          CardBox(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            onTap: () {
-              a.from = r.$1;
-              a.to = r.$2;
-              a.notify();
-              toast(context, '${airportBy(r.$1).city} to ${airportBy(r.$2).city} selected');
-            },
-            child: Row(children: [
-              const Icon(Icons.flight, color: gold),
-              const SizedBox(width: 12),
-              Expanded(child: Text('${airportBy(r.$1).city} to ${airportBy(r.$2).city}', style: const TextStyle(fontWeight: FontWeight.w600))),
-              Text(money(searchFlights(r.$1, r.$2, 'Economy')[2].price), style: const TextStyle(color: navy, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 20),
+              PrimaryBtn('Done', onTap: () => Navigator.pop(ctx)),
             ]),
           ),
+        ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final a = context.app;
+    final from = airportBy(a.from), to = airportBy(a.to);
+    final oneWay = a.tripType != 'Return';
+
+    Widget tab(String t, VoidCallback f, bool sel) => Expanded(
+          child: GestureDetector(
+            onTap: f,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              decoration: BoxDecoration(color: sel ? const Color(0xFFE6EEFB) : Colors.transparent, borderRadius: BorderRadius.circular(8)),
+              child: Text(t, textAlign: TextAlign.center, style: TextStyle(fontSize: 14.5, fontWeight: sel ? FontWeight.w700 : FontWeight.w400, color: sel ? navy : ink)),
+            ),
+          ),
+        );
+
+    Widget tile(Widget child, VoidCallback f, {double h = 78}) => Expanded(
+          child: Material(
+            color: Colors.white,
+            child: InkWell(onTap: f, child: Container(height: h, alignment: Alignment.center, padding: const EdgeInsets.symmetric(horizontal: 8), child: child)),
+          ),
+        );
+
+    Widget city(String label, Airport? ap) => ap == null
+        ? Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 16, color: muted))
+        : Column(mainAxisSize: MainAxisSize.min, children: [
+            Text(label, style: const TextStyle(color: muted, fontSize: 13)),
+            Text(ap.code, style: const TextStyle(fontSize: 34, fontWeight: FontWeight.w800, color: navy, height: 1.1)),
+            Text(ap.city, style: const TextStyle(fontSize: 14, color: navy)),
+          ]);
+
+    Widget date(String label, DateTime? d, VoidCallback f, {bool disabled = false}) => tile(
+          Text(d == null ? label : fmtDate(d), textAlign: TextAlign.center, style: TextStyle(fontSize: d == null ? 16 : 15, color: disabled ? line : (d == null ? muted : navy), fontWeight: d == null ? FontWeight.w400 : FontWeight.w700)),
+          disabled ? () {} : f,
+          h: 70,
+        );
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFEFEFEF),
+      body: Column(children: [
+        Container(
+          color: Colors.white,
+          padding: EdgeInsets.fromLTRB(18, MediaQuery.of(context).padding.top + 10, 16, 12),
+          child: Row(children: [
+            Expanded(child: Text('Book Flights', style: serif(27, c: navy, w: FontWeight.w500))),
+            GestureDetector(
+              onTap: () => a.goTab(4, 'profile'),
+              child: Container(width: 38, height: 38, decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: navy, width: 2)), child: const Icon(Icons.person, color: navy, size: 26)),
+            ),
+          ]),
+        ),
+        Expanded(
+          child: ListView(padding: const EdgeInsets.fromLTRB(10, 0, 10, 20), children: [
+            Container(
+              color: Colors.white,
+              padding: const EdgeInsets.all(6),
+              child: Row(children: [
+                tab('Return', () {
+                  a.tripType = 'Return';
+                  a.notify();
+                }, a.tripType == 'Return'),
+                tab('One-way', () {
+                  a.tripType = 'One-way';
+                  a.notify();
+                }, a.tripType == 'One-way'),
+                tab('Multi-city', () {
+                  a.tripType = 'Multi-city';
+                  a.notify();
+                  toast(context, 'Multi-city is simulated as a single leg in this demo');
+                }, a.tripType == 'Multi-city'),
+                tab('Saved flights', _saved, false),
+              ]),
+            ),
+            const SizedBox(height: 10),
+            Stack(alignment: Alignment.center, children: [
+              Row(children: [
+                tile(city('From', from), () => _pickAirport(true), h: 130),
+                Container(width: 2, height: 130, color: bg),
+                tile(city('To', to), () => _pickAirport(false), h: 130),
+              ]),
+              GestureDetector(
+                onTap: a.swap,
+                child: Container(width: 48, height: 48, decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, border: Border.all(color: gold, width: 1.5)), child: const Icon(Icons.swap_horiz, color: gold)),
+              ),
+            ]),
+            const SizedBox(height: 10),
+            Column(children: [
+                Row(children: [
+                  date('Departure date', a.depart, () async {
+                    final d = await pickDate(context, a.depart);
+                    if (d != null) {
+                      a.depart = d;
+                      if (a.ret != null && a.ret!.isBefore(d)) a.ret = d.add(const Duration(days: 7));
+                      a.notify();
+                    }
+                  }),
+                  Container(width: 2, height: 70, color: bg),
+                  date('Return date', oneWay ? null : a.ret, () async {
+                    final d = await pickDate(context, a.ret ?? a.depart, first: a.depart);
+                    if (d != null) {
+                      a.ret = d;
+                      a.notify();
+                    }
+                  }, disabled: oneWay),
+                ]),
+                const SizedBox(height: 10),
+                Row(children: [
+                  tile(
+                    Column(mainAxisSize: MainAxisSize.min, children: [
+                      Text.rich(TextSpan(children: [
+                        TextSpan(text: '${a.adults} ${a.adults == 1 ? 'Adult' : 'Adults'}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: navy)),
+                        const TextSpan(text: ' in', style: TextStyle(fontSize: 16, color: muted)),
+                      ])),
+                      Text(a.cabin, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: navy)),
+                    ]),
+                    _passengers,
+                    h: 92,
+                  ),
+                ]),
+                GestureDetector(
+                  onTap: _promo,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    child: Text(promo.isEmpty ? 'Do you have a promo code?' : 'Promo code: $promo', style: const TextStyle(color: navy, fontSize: 17, fontWeight: FontWeight.w700)),
+                  ),
+                ),
+                Container(
+                  color: Colors.white,
+                  padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+                  child: Row(children: [
+                    const Expanded(child: Text.rich(TextSpan(children: [TextSpan(text: 'Try our new booking experience  '), WidgetSpan(child: Icon(Icons.info, size: 19, color: muted))]), style: TextStyle(fontSize: 16, color: ink))),
+                    Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4), decoration: BoxDecoration(color: const Color(0xFFFFA400), borderRadius: BorderRadius.circular(12)), child: const Text('BETA', style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: 1.5, fontSize: 12))),
+                    Switch(value: beta, activeTrackColor: navy, onChanged: (v) {
+                      setState(() => beta = v);
+                      toast(context, v ? 'New booking experience enabled (demo)' : 'Classic booking experience');
+                    }),
+                  ]),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  height: 62,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      if (a.from == a.to) {
+                        toast(context, 'Origin and destination must be different');
+                        return;
+                      }
+                      Navigator.of(context).pushNamed('results');
+                    },
+                    style: ElevatedButton.styleFrom(backgroundColor: navy, foregroundColor: Colors.white, elevation: 0, shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(3)))),
+                    child: const Text('SEARCH', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w700, letterSpacing: .5)),
+                  ),
+                ),
+                const SizedBox(height: 22),
+                InkWell(
+                  onTap: () => Navigator.of(context).pushNamed('results'),
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(color: Colors.white, border: Border.all(color: sqBlue, width: 1.2), borderRadius: BorderRadius.circular(3)),
+                    child: Row(children: [
+                      Container(padding: const EdgeInsets.all(10), decoration: const BoxDecoration(color: Color(0xFFEAF0FA), shape: BoxShape.circle), child: const Icon(Icons.auto_awesome, color: sqBlue)),
+                      const SizedBox(width: 14),
+                      const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text('Get best flights quicker', style: TextStyle(color: sqBlue, fontSize: 19, fontWeight: FontWeight.w700)),
+                        Text('Search and compare fares easier', style: TextStyle(color: ink, fontSize: 15)),
+                      ])),
+                      const Icon(Icons.chevron_right, color: muted),
+                    ]),
+                  ),
+                ),
+              ]),
+            ),
+          ]),
+        ),
       ]),
     );
+  }
+
+  void _promo() {
+    final c = TextEditingController(text: promo);
+    sheet(context, (ctx) => Padding(
+          padding: const EdgeInsets.all(22),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Promo code', style: serif(21)),
+            const SizedBox(height: 14),
+            Field('Enter code', c: c, icon: Icons.local_offer_outlined),
+            PrimaryBtn('Apply', onTap: () {
+              setState(() => promo = c.text.trim().toUpperCase());
+              Navigator.pop(ctx);
+              toast(context, promo.isEmpty ? 'Promo code removed' : 'Code $promo applied (demo)');
+            }),
+            const SizedBox(height: 8),
+          ]),
+        ));
+  }
+
+  void _saved() {
+    final a = context.app;
+    sheet(context, (ctx) => Padding(
+          padding: const EdgeInsets.all(22),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Saved flights', style: serif(21)),
+            const SizedBox(height: 10),
+            for (final r in const [('BOM', 'SIN'), ('SIN', 'SYD'), ('DEL', 'LHR')])
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.bookmark, color: gold),
+                title: Text('${airportBy(r.$1).city} to ${airportBy(r.$2).city}', style: const TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text('${r.$1} - ${r.$2}'),
+                onTap: () {
+                  a.from = r.$1;
+                  a.to = r.$2;
+                  a.notify();
+                  Navigator.pop(ctx);
+                },
+              ),
+          ]),
+        ));
   }
 }
 
