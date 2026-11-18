@@ -561,7 +561,7 @@ class _HomePageState extends State<HomePage> {
                         style: TextStyle(
                           letterSpacing: 2,
                           color: ink,
-                          fontSize: 15,
+                          fontSize: 12,
                         ),
                       ),
                       SizedBox(width: 8),
