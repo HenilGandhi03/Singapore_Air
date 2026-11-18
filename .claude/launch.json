@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "merlion-web",
+      "runtimeExecutable": "/bin/sh",
+      "runtimeArgs": ["-c", "cd / && exec python3 -m http.server 8099 --directory /private/tmp/merlion_web"],
+      "port": 8099
+    }
+  ]
+}
