@@ -861,11 +861,15 @@ class PassengersPage extends StatefulWidget {
 
 class _PassengersPageState extends State<PassengersPage> {
   late final List<Map<String, TextEditingController>> cs;
+  bool _initialized = false;
+
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_initialized) return;
     final pax = context.app.draftPax;
     cs = [for (final p in pax) _mk(p)];
+    _initialized = true;
   }
 
   Map<String, TextEditingController> _mk(PassengerInfo p) => {
