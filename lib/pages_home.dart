@@ -121,22 +121,29 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final app = context.app;
     final nt = app.nextTrip;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final heroHeight = (screenHeight * 0.28).clamp(240.0, 300.0).toDouble();
+    final heroImageHeight = (heroHeight * 0.75).toDouble();
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          // ---------------- white app header
+          // ---------------- white app header Home Screen
           Container(
             color: Colors.white,
             padding: EdgeInsets.fromLTRB(
               16,
-              MediaQuery.of(context).padding.top + 8,
+              MediaQuery.of(context).padding.top - 10,
               16,
               8,
             ),
             child: Row(
               children: [
-                const SiaLogo(height: 42),
+                Transform.scale(
+                  scale: 1.5,
+                  alignment: Alignment.centerLeft,
+                  child: SiaLogo(height: 42),
+                ),
                 const Spacer(),
                 GestureDetector(
                   onTap: () => openRoute(context, 'notifications'),
@@ -190,9 +197,18 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
           ),
-          // ---------------- welcome bar
+          // ---------------- Gradient welcome bar
           Container(
-            color: navy,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color.fromARGB(255, 2, 77, 191),
+                  Color.fromARGB(255, 105, 168, 198),
+                ],
+              ),
+            ),
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
             child: Row(
               children: [
@@ -216,13 +232,14 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
           ),
+          // ---------------- main scrollable content
           Expanded(
             child: ListView(
               padding: EdgeInsets.zero,
               children: [
-                // ---------------- hero carousel
+                // ---------------- hero carousel with title overlay
                 SizedBox(
-                  height: 330,
+                  height: heroHeight,
                   child: PageView.builder(
                     controller: pc,
                     itemCount: _heroes.length,
@@ -238,7 +255,7 @@ class _HomePageState extends State<HomePage> {
                               h.$1,
                               c1: h.$4,
                               c2: h.$5,
-                              height: 210,
+                              height: heroImageHeight,
                               child: Container(
                                 decoration: BoxDecoration(
                                   gradient: LinearGradient(
@@ -280,15 +297,17 @@ class _HomePageState extends State<HomePage> {
                     },
                   ),
                 ),
+                // ---------------- hero carousel dots
                 _dots(_heroes.length, page),
+                // ---------------- spacer
                 const SizedBox(height: 18),
                 // ---------------- plan your next getaway
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  padding: const EdgeInsets.symmetric(horizontal: 3),
                   child: InkWell(
                     onTap: () => app.goTab(1),
                     child: Container(
-                      padding: const EdgeInsets.all(14),
+                      padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
                         border: Border.all(color: sqBlue, width: 1.2),
                         borderRadius: BorderRadius.circular(3),
@@ -296,7 +315,7 @@ class _HomePageState extends State<HomePage> {
                       child: Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.all(10),
+                            // padding: const EdgeInsets.all(10),
                             decoration: const BoxDecoration(
                               color: Color(0xFFEAF0FA),
                               shape: BoxShape.circle,
@@ -331,55 +350,11 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                 ),
-                // ---------------- upcoming trip
-                if (nt != null) ...[
-                  _title('Your upcoming trip', 'See all', () => app.goTab(2)),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    child: _tripCard(context, nt),
-                  ),
-                ],
-                // ---------------- quick actions
-                _title('Quick actions'),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  child: GridView.count(
-                    crossAxisCount: 3,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisSpacing: 10,
-                    mainAxisSpacing: 10,
-                    childAspectRatio: 1.05,
-                    children: [
-                      _qa(
-                        Icons.flight_takeoff,
-                        'Book a Flight',
-                        () => app.goTab(1),
-                      ),
-                      _qa(Icons.luggage, 'Manage Booking', () => app.goTab(2)),
-                      _qa(
-                        Icons.how_to_reg,
-                        'Check In',
-                        () => openRoute(context, 'checkin', null, 2),
-                      ),
-                      _qa(Icons.radar, 'Flight Status', () => app.goTab(3)),
-                      _qa(
-                        Icons.qr_code_2,
-                        'Boarding Pass',
-                        () => openBoardingPass(context),
-                      ),
-                      _qa(
-                        Icons.workspace_premium,
-                        'My Miles',
-                        () => app.goTab(4, 'miles'),
-                      ),
-                    ],
-                  ),
-                ),
+
                 // ---------------- best fares
                 _title('Find our Best Fares', 'See all', () => app.goTab(1)),
                 SizedBox(
-                  height: 285,
+                  height: 260,
                   child: PageView.builder(
                     controller: pc2,
                     padEnds: false,
@@ -466,7 +441,7 @@ class _HomePageState extends State<HomePage> {
                 ),
                 // ---------------- promo banner
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 6, 14, 0),
+                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 0),
                   child: GestureDetector(
                     onTap: () => openRoute(context, 'offer', 'tokyo'),
                     child: Column(
@@ -525,7 +500,55 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                 ),
+
+                //                 // ---------------- upcoming trip
+                // if (nt != null) ...[
+                //   _title('Your upcoming trip', 'See all', () => app.goTab(2)),
+                //   Padding(
+                //     padding: const EdgeInsets.symmetric(horizontal: 14),
+                //     child: _tripCard(context, nt),
+                //   ),
+                // ],
+                // // ---------------- quick actions
+                // _title('Quick actions'),
+                // Padding(
+                //   padding: const EdgeInsets.symmetric(horizontal: 14),
+                //   child: GridView.count(
+                //     crossAxisCount: 3,
+                //     shrinkWrap: true,
+                //     physics: const NeverScrollableScrollPhysics(),
+                //     crossAxisSpacing: 10,
+                //     mainAxisSpacing: 10,
+                //     childAspectRatio: 1.05,
+                //     children: [
+                //       _qa(
+                //         Icons.flight_takeoff,
+                //         'Book a Flight',
+                //         () => app.goTab(1),
+                //       ),
+                //       _qa(Icons.luggage, 'Manage Booking', () => app.goTab(2)),
+                //       _qa(
+                //         Icons.how_to_reg,
+                //         'Check In',
+                //         () => openRoute(context, 'checkin', null, 2),
+                //       ),
+                //       _qa(Icons.radar, 'Flight Status', () => app.goTab(3)),
+                //       _qa(
+                //         Icons.qr_code_2,
+                //         'Boarding Pass',
+                //         () => openBoardingPass(context),
+                //       ),
+                //       _qa(
+                //         Icons.workspace_premium,
+                //         'My Miles',
+                //         () => app.goTab(4, 'miles'),
+                //       ),
+                //     ],
+                //   ),
+                // ),
+                //
                 const SizedBox(height: 20),
+
                 Container(
                   color: const Color(0xFFF2F2F4),
                   padding: const EdgeInsets.symmetric(vertical: 14),
